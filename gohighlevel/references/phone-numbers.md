@@ -80,9 +80,9 @@ GET /phone-system/numbers/location/{locationId}/available
 - `locationId` (required): Sub-account ID
 
 **Query Parameters:**
-- `type` (required): Number type. Values: `"local"`, `"tollFree"`, `"mobile"`
 - `countryCode` (required): ISO country code (e.g., `"US"`, `"CA"`)
-- `areaCode` (optional): Filter by area code (e.g., `"415"`, `"212"`)
+- `numberTypes` (required): Type of number to search for (e.g., `"local"`, `"tollFree"`, `"mobile"`)
+- `firstPart` (optional): Filter by the first part of the phone number (typically area code, e.g., `"415"`, `"212"`, `"438"`)
 - `contains` (optional): Filter numbers containing this digit sequence
 - `limit` (optional): Max results to return
 
@@ -107,11 +107,11 @@ GET /phone-system/numbers/location/{locationId}/available
 }
 ```
 
-**Note:** The response returns an empty `numbers` array if no numbers are available matching the criteria. The `fingerprintId` is used for caching/deduplication.
+**Note:** The response returns an empty `numbers` array if no numbers are available matching the criteria. The `fingerprintId` is **CRITICAL** - it must be included in the purchase request to successfully buy a number from this search result set.
 
 **Area Code Selection Strategy:**
 1. Get the sub-account's location/region via GET /locations/{locationId}
-2. Use the primary area code for that city/region as the `areaCode` parameter
+2. Use the primary area code for that city/region as the `firstPart` parameter
 3. If no numbers are available, try these fallback strategies:
    - Neighboring area codes in the same metropolitan area
    - Other area codes in the same state
@@ -141,16 +141,42 @@ POST /phone-system/numbers/location/{locationId}/purchase
 **Request Body:**
 ```json
 {
-  "phoneNumber": "+14155551234",
-  "type": "local"
+  "phoneNumber": "+14388394450",
+  "countryCode": "CA",
+  "numberType": "local",
+  "fingerprintId": "1774462989812"
 }
 ```
 
 **Field Notes:**
-- `phoneNumber` (required): The full E.164 formatted number from the search results (e.g., `"+14155551234"`)
-- `type` (required): Must match the type used in the search (`"local"`, `"tollFree"`, `"mobile"`)
+- `phoneNumber` (required): The full E.164 formatted number from the search results (e.g., `"+14388394450"`)
+- `countryCode` (required): ISO country code matching the number (e.g., `"US"`, `"CA"`)
+- `numberType` (required): Must match the type from search results (`"local"`, `"tollFree"`, `"mobile"`)
+- `fingerprintId` (required): The `fingerprintId` value from the search response - this ties the purchase to the specific search results
 
-**Response (201):** Returns updated phone system state for the location. Exact response shape not verified (would incur cost). Expect similar structure to the list active numbers response.
+**Response (201):**
+```json
+{
+  "id": "bETS543iEjDlndeY9rWK",
+  "account_sid": "ACefa0070961878d726a01aaa203c60710",
+  "under_ghl_account": true,
+  "validate_sms": true,
+  "location_id": "ox6oaZ5j2iG0qxjc9Pfc",
+  "migration_numbers": [],
+  "assigned_to_numbers": {
+    "+14386065685": "dlhRBzdJhuW0Z5X22AXD"
+  },
+  "numbers": {
+    "+14388394450": "conversation"
+  },
+  "number_name": {
+    "+14388394450": "(438) 839-4450"
+  },
+  "new_account_sid": ""
+}
+```
+
+Returns updated phone system state showing the newly purchased number in the `numbers` object.
 
 **CAUTION:** Purchasing a number incurs a recurring cost. Always confirm with the user before purchasing.
 
@@ -204,7 +230,8 @@ Step 1: Get the sub-account location to determine region
   -> Extract address/state/city to determine area code
 
 Step 2: Search for available numbers
-  GET /phone-system/numbers/location/{locationId}/available?type=local&countryCode=US&areaCode={areaCode}
+  GET /phone-system/numbers/location/{locationId}/available?countryCode=US&numberTypes=local&firstPart={areaCode}
+  -> Save the fingerprintId from the response
   -> If empty, try neighboring area codes (see area code strategy above)
 
 Step 3: Confirm number selection with user
@@ -213,7 +240,12 @@ Step 3: Confirm number selection with user
 
 Step 4: Purchase the number
   POST /phone-system/numbers/location/{locationId}/purchase
-  Body: { phoneNumber: "+14155551234", type: "local" }
+  Body: {
+    phoneNumber: "+14155551234",
+    countryCode: "US",
+    numberType: "local",
+    fingerprintId: "1774462989812"
+  }
 
 Step 5: Assign to the user
   GET /users/{userId} to retrieve current lcPhone
@@ -249,7 +281,4 @@ Step 2: Update their lcPhone to set the location's number to empty string
   PUT /users/{userId}
   Body: { "lcPhone": { "locationId": "" } }
 
-Step 3: Optionally release the number (if no longer needed)
-  Note: There is no documented DELETE endpoint for phone numbers.
-  Releasing must be done via the GHL frontend UI or contact support.
 ```

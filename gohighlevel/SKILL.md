@@ -1,5 +1,5 @@
 ---
-name: GoHighLevel
+name: gohighlevel
 description: >
   Manage GoHighLevel (GHL) sub-accounts via API for Netrevenue clients. Use this skill whenever the user asks about
   GHL account operations including: adding, removing, or updating users in a GHL account; managing calendar assignments
@@ -20,10 +20,72 @@ Manage GoHighLevel sub-accounts via API for Netrevenue's client accounts. This s
 
 Before performing ANY GHL API action, you MUST:
 
-1. **Identify the target GHL account.** Ask the user which client account this action targets if not obvious from context.
-2. **Obtain the API token and locationId** for that account. Currently using Private Integration Tokens (PIT) stored per account. Ask the user for both the token and locationId, or retrieve them from the configured credential source.
+1. **Identify the target GHL account.** Extract the account name from the user's request (e.g., "Add John to the Acme Corp calendar" → account is "Acme Corp").
+2. **Resolve credentials automatically.** Call the credential lookup webhook to get the locationId and API token for the account. See `references/authentication.md` for the complete API reference.
 3. **Obtain the companyId** if creating or searching users. Get this from GET /locations/{locationId} response field `companyId`.
 4. **Confirm destructive actions.** Before deleting users, releasing numbers, or modifying calendars, confirm with the user: "I'm about to [action] on [account]. Proceed?"
+
+## Authentication & Credential Resolution
+
+**Automatic Credential Lookup:**
+
+Instead of asking users for tokens and locationIds, this skill automatically resolves credentials from the account registry via n8n webhook.
+
+**How it works:**
+
+1. User mentions an account name: "List users in the Testing account"
+2. You extract the account name: "Testing"
+3. You call the credential lookup webhook with API key:
+   ```bash
+   curl -X POST $GHL_AUTH_WEBHOOK_URL \
+     -H "Content-Type: application/json" \
+     -H "X-API-Key: $GHL_AUTH_API_KEY" \
+     -d '{"accountName": "Testing"}'
+   ```
+4. Webhook returns credentials:
+   ```json
+   {
+     "success": true,
+     "match": {
+       "name": "Testing Account",
+       "locationId": "ox6oaZ5j2iG0qxjc9Pfc",
+       "token": "pit-1b6efa02-3dsd-4a0b-8523-bc8d7ba039ce",
+       "confidence": 0.95
+     }
+   }
+   ```
+5. Use these credentials for all GHL API calls
+
+**Error Handling:**
+
+If credential lookup fails (no match):
+```json
+{
+  "success": false,
+  "error": "No account found matching 'xyz'",
+  "suggestions": ["Acme Corp", "ABC Industries", "Testing Account"]
+}
+```
+
+**Response:** Ask the user to clarify which account they meant, showing the suggestions.
+
+If multiple ambiguous matches:
+```json
+{
+  "success": false,
+  "error": "Multiple accounts match. Please clarify.",
+  "matches": [
+    {"name": "Acme Corp", "confidence": "75%"},
+    {"name": "Acme Industries", "confidence": "70%"}
+  ]
+}
+```
+
+**Response:** Ask the user which account they meant, listing the options.
+
+**Manual Override:**
+
+If the user explicitly provides credentials (e.g., "Use locationId abc123 and token pit-xyz"), use those instead of the webhook lookup.
 
 ## API Fundamentals
 
@@ -71,7 +133,7 @@ Read the appropriate reference file for detailed endpoint documentation before m
 When purchasing a phone number for a rep, follow this specific sequence:
 
 1. **Determine the area code.** The area code should match the region where the sub-account is based. Get the sub-account's address via GET /locations/{locationId} and extract the state/city/country.
-2. **Search available numbers** using GET /phone-system/numbers/location/{locationId}/available with `type=local`, `countryCode` (e.g., `US` or `CA`), and `areaCode` (e.g., `415`).
+2. **Search available numbers** using GET /phone-system/numbers/location/{locationId}/available with `countryCode` (e.g., `US` or `CA`) and `firstPart` (e.g., `415`).
 3. **If no numbers available** for the primary area code, try neighboring area codes for the same region. For example, if 415 has no availability, try 628 (also San Francisco), 510 (East Bay), or 650 (Peninsula).
 4. **Purchase the number** using POST /phone-system/numbers/location/{locationId}/purchase with the phone number and type.
 5. **Assign to the user** by updating the user's `lcPhone` field via PUT /users/{userId}. Set `lcPhone[locationId] = "+14155551234"`.
