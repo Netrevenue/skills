@@ -327,34 +327,3 @@ DELETE /contacts/{contactId}/tags
   "tags": ["old-tag"]
 }
 ```
-
----
-
-## Account Audit Checklist
-
-When auditing a sub-account's configuration, check the following:
-
-### Basic Configuration
-- [ ] Account name, address, and timezone are correctly set (GET /locations/{locationId})
-- [ ] Custom fields are present for required data points (GET /locations/{locationId}/customFields)
-
-### User Setup
-- [ ] All expected users exist (GET /users/?locationId={locationId})
-- [ ] Users have correct roles and permissions
-- [ ] No stale/inactive users that should be removed
-
-### Calendar Setup
-- [ ] Required calendars exist (GET /calendars/?locationId={id})
-- [ ] Each calendar has the correct team members assigned
-- [ ] Calendar hours and availability are configured
-- [ ] Round-robin weights are balanced (check teamMembers priority values)
-
-### Phone Numbers
-- [ ] All active reps have an assigned phone number
-- [ ] No unassigned numbers wasting cost (GET /phone-system/numbers/location/{locationId})
-- [ ] Numbers have correct capabilities (voice + SMS)
-
-### Pipeline Setup
-- [ ] Expected pipelines exist (GET /opportunities/pipelines?locationId={id})
-- [ ] Pipeline stages are in the correct order
-- [ ] No orphaned opportunities (unassigned, stale, or in deleted stages)

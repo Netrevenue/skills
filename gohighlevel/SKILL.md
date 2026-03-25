@@ -1,5 +1,5 @@
 ---
-name: ghl-operations
+name: GoHighLevel
 description: >
   Manage GoHighLevel (GHL) sub-accounts via API for Netrevenue clients. Use this skill whenever the user asks about
   GHL account operations including: adding, removing, or updating users in a GHL account; managing calendar assignments
@@ -12,7 +12,7 @@ description: >
   to remember the steps for future use.
 ---
 
-# GHL Operations Skill
+# GoHighLevel Skill
 
 Manage GoHighLevel sub-accounts via API for Netrevenue's client accounts. This skill covers user management, calendar management, phone number management, pipeline/opportunity reads, and account configuration.
 
