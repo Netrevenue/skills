@@ -30,7 +30,7 @@ GET /phone-system/numbers/location/{locationId}
     {
       "phoneNumber": "+14387032919",
       "friendlyName": "John Dear's Number",
-      "sid": "PNd529f11b6a514b2c7631b554bf15923a",
+      "sid": "{SID}",
       "countryCode": "CA",
       "capabilities": {
         "fax": false,
@@ -158,7 +158,7 @@ POST /phone-system/numbers/location/{locationId}/purchase
 ```json
 {
   "id": "bETS543iEjDlndeY9rWK",
-  "account_sid": "ACefa0070961878d726a01aaa203c60710",
+  "account_sid": "{SID}",
   "under_ghl_account": true,
   "validate_sms": true,
   "location_id": "ox6oaZ5j2iG0qxjc9Pfc",
