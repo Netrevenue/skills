@@ -31,57 +31,7 @@ Before performing ANY GHL API action, you MUST:
 
 Instead of asking users for tokens and locationIds, this skill automatically resolves credentials from the account registry via n8n webhook.
 
-**How it works:**
-
-1. User mentions an account name: "List users in the Testing account"
-2. You extract the account name: "Testing"
-3. You call the credential lookup webhook with API key:
-   ```bash
-   curl -X POST $GHL_AUTH_WEBHOOK_URL \
-     -H "Content-Type: application/json" \
-     -H "X-API-Key: $GHL_AUTH_API_KEY" \
-     -d '{"accountName": "Testing"}'
-   ```
-4. Webhook returns credentials:
-   ```json
-   {
-     "success": true,
-     "match": {
-       "name": "Testing Account",
-       "locationId": "ox6oaZ5j2iG0qxjc9Pfc",
-       "token": "pit-1b6efa02-3dsd-4a0b-8523-bc8d7ba039ce",
-       "confidence": 0.95
-     }
-   }
-   ```
-5. Use these credentials for all GHL API calls
-
-**Error Handling:**
-
-If credential lookup fails (no match):
-```json
-{
-  "success": false,
-  "error": "No account found matching 'xyz'",
-  "suggestions": ["Acme Corp", "ABC Industries", "Testing Account"]
-}
-```
-
-**Response:** Ask the user to clarify which account they meant, showing the suggestions.
-
-If multiple ambiguous matches:
-```json
-{
-  "success": false,
-  "error": "Multiple accounts match. Please clarify.",
-  "matches": [
-    {"name": "Acme Corp", "confidence": "75%"},
-    {"name": "Acme Industries", "confidence": "70%"}
-  ]
-}
-```
-
-**Response:** Ask the user which account they meant, listing the options.
+Perform the workflow in the authentication.md reference file to resolve the credentials from the provided account name.
 
 **Manual Override:**
 
@@ -122,6 +72,7 @@ Read the appropriate reference file for detailed endpoint documentation before m
 
 | Category | Reference File | Key Actions |
 |---|---|---|
+| Authentication | `references/authentication.md` | Resolve GHL account credentials from provided name |
 | User Management | `references/users.md` | Add, remove, update, list, search users |
 | Calendar Management | `references/calendars.md` | Create, update, delete calendars; assign/remove reps |
 | Phone Numbers | `references/phone-numbers.md` | Search available, purchase, list active, assign to users |
