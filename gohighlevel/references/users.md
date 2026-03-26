@@ -230,7 +230,7 @@ POST /users/
 **Field Notes:**
 - `companyId` (required): The agency company ID. Get from GET /locations/{locationId}.
 - `firstName`, `lastName`, `email`: Required.
-- `password`: If empty string, GHL sends a setup email. If provided, must meet GHL password requirements.
+- `password`: If empty string, GHL sends a setup email. If provided, must meet GHL password requirements (must include uppercase, lowercase, numbers, and special chars).
 - `type`: Use `"account"` for sub-account level users. Do NOT use `"agency"`.
 - `role`: Values are `"admin"` or `"user"`. Admins have full access; users are restricted by permissions.
 - `locationIds`: Array of location IDs the user should have access to.
@@ -239,6 +239,15 @@ POST /users/
 **IMPORTANT:** When creating a user with role `"user"`, GHL fills in many permission defaults as `true`. If you want a restricted rep, you must explicitly set unwanted permissions to `false` in a follow-up PUT call after verifying the created user's permissions.
 
 **Response (201):** Returns the full user object (same shape as GET single user), including the auto-expanded permissions and assigned scopes.
+
+**Error (400) - User Already Exists:**
+```json
+{
+  "message": "A user with this email already exists"
+}
+```
+
+When you receive this error, the user exists in the agency but may not have access to the target sub-account. Follow the "Handling Duplicate Users" workflow below to add them to the sub-account.
 
 ---
 
@@ -266,6 +275,111 @@ PUT /users/{userId}
 **IMPORTANT:** When updating permissions, GET the user first to see the current full permissions object, modify the fields you need, then PUT the entire permissions object back. Sending a partial permissions object may reset unlisted fields to defaults.
 
 **Response (200):** Returns the updated user object.
+
+---
+
+## Handling Duplicate Users
+
+When creating a user, GHL returns a "user already exists" error if the email is already registered in the agency. This does NOT mean the user has access to your target sub-account—it only means they exist somewhere in the agency.
+
+**The workflow to handle this:**
+
+### Step 1: Attempt to Create the User
+
+Try the normal POST /users/ request. If you get a 400 error with message "A user with this email already exists", proceed to Step 2.
+
+### Step 2: Search for the Existing User
+
+Use the Search Users endpoint to find the user in the agency:
+
+```
+GET /users/search?companyId={agencyId}&query={email}
+```
+
+**Important:** The `companyId` parameter must be the agency company ID (not the location ID). You can get this from GET /locations/{locationId} response field `companyId`.
+
+**Response (200):**
+```json
+{
+  "users": [
+    {
+      "id": "WYrr6bdoI44Wgp46nHtb",
+      "email": "jane.doe@example.com",
+      "firstName": "Jane",
+      "lastName": "Doe",
+      "roles": {
+        "type": "account",
+        "role": "user",
+        "locationIds": ["some_other_location_id"],
+        "restrictSubAccount": false
+      }
+    }
+  ],
+  "count": 1
+}
+```
+
+### Step 3: Check Location Access
+
+Examine the `roles.locationIds` array in the response:
+- If your target `locationId` is already in the array → The user already has access. Inform the user that the account already exists with access.
+- If your target `locationId` is NOT in the array → Proceed to Step 4 to add access.
+
+### Step 4: Update User to Add Location Access
+
+Merge the existing `locationIds` with your target `locationId` and update the user:
+
+```
+PUT /users/{userId}
+```
+
+**Request Body:**
+```json
+{
+  "companyId": "VBW5vxWDhCP6mOEKBupq",
+  "locationIds": ["existing_location_1", "existing_location_2", "your_new_location_id"]
+}
+```
+
+**IMPORTANT:**
+- You MUST include ALL existing locationIds plus the new one. If you only send the new locationId, GHL will remove access from all other locations.
+- The `companyId` in the PUT request should be the agency ID (same as used in search).
+- Extract existing locationIds from the search response `roles.locationIds` array.
+
+
+**Response (200):** Returns the updated user object with the new locationIds array.
+
+### Step 5: Verify Success
+
+After the PUT request succeeds, the user now has access to the target sub-account. You can verify by calling GET /users/?locationId={targetLocationId} and confirming the user appears in the list.
+
+### Summary Workflow Diagram
+
+```
+Try POST /users/
+  ↓
+  ├─ 201 Success → User created ✓
+  │
+  └─ 400 "user already exists"
+       ↓
+       GET /users/search?companyId={agencyId}&query={email}
+       ↓
+       ├─ count: 0 → User in different agency (manual intervention required)
+       │
+       └─ count: 1 → User found
+            ↓
+            Check user.roles.locationIds
+            ↓
+            ├─ Already includes target locationId → User already has access ✓
+            │
+            └─ Does NOT include target locationId
+                 ↓
+                 Merge locationIds: [...existing, targetLocationId]
+                 ↓
+                 PUT /users/{userId} with merged locationIds
+                 ↓
+                 200 Success → User now has access ✓
+```
 
 ---
 

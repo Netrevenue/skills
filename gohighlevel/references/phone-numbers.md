@@ -107,7 +107,7 @@ GET /phone-system/numbers/location/{locationId}/available
 }
 ```
 
-**Note:** The response returns an empty `numbers` array if no numbers are available matching the criteria. The `fingerprintId` is **CRITICAL** - it must be included in the purchase request to successfully buy a number from this search result set.
+**Note:** The response returns an empty `numbers` array if no numbers are available matching the criteria. The `fingerprintId` is **CRITICAL** - it must be included in the purchase request to successfully buy a number from this search result set. You must include "numberTypes":"local" when filtering for a regions phone numbers. 
 
 **Area Code Selection Strategy:**
 1. Get the sub-account's location/region via GET /locations/{locationId}
