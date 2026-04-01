@@ -282,21 +282,92 @@ GET /surveys/submissions?locationId={locationId}
 
 ---
 
+## IMPORTANT: Resolving Custom Field Names (Required Step)
+
+**You MUST always resolve custom field IDs to human-readable question labels before presenting submission data to the user.** Submission responses contain opaque field IDs (e.g., `"aW4C0qMJbF15uWQ2bgO5"`) that are meaningless on their own. The custom fields endpoint maps these IDs to their actual question text.
+
+### Step 1: Fetch the custom field mapping
+
+Call this endpoint **once per session** (before or in parallel with fetching submissions):
+
+```
+GET /locations/{locationId}/customFields
+```
+
+This returns all custom fields for the account. Build a lookup map of `id` → `name`:
+
+```json
+{
+  "customFields": [
+    {
+      "id": "aW4C0qMJbF15uWQ2bgO5",
+      "name": "What best describes your current role or situation?",
+      "dataType": "RADIO",
+      ...
+    },
+    {
+      "id": "771ALwnV26PJ74La1ZDD",
+      "name": "Team Size:",
+      "dataType": "TEXT",
+      ...
+    }
+  ]
+}
+```
+
+### Step 2: Replace IDs in submission `others` with readable names
+
+For each submission, iterate over the `others` key-value pairs. For any key that matches a custom field ID, replace it with the field's `name`. Skip standard keys (`phone`, `email`, `first_name`, `last_name`, `full_name`, `formId`, `location_id`, `Timezone`, `eventData`, `fieldsOriSequance`, `sessionId`, `sessionFingerprint`, `submissionId`, `signatureHash`, `ip`, `terms_and_conditions`, `source`, `dateFieldDetails`, `internalSource`, `calendar_name`, `selected_timezone`, `selected_slot`, `disqualified`, `contact_id`).
+
+**Example — raw submission `others`:**
+```json
+{
+  "aW4C0qMJbF15uWQ2bgO5": "Founder of a business",
+  "L1WyG5ycOat0GnYjJTZu": "WXM LEGAL LTD",
+  "8oYKsVejNf5Ctb6NBttn": "Consulting / business Influencer",
+  "771ALwnV26PJ74La1ZDD": "1",
+  "25uz32S95fEn7ZTBjc4v": "Me",
+  "yQj1mZwBgjRs8RRnnPeL": "8 figure revenue",
+  "NesGqea9QpXrotrwN8SH": "Millionaire status",
+  "8g3ZONxBrEtfnuV1A8JX": "Momentum. And now is perfect butterfly effect"
+}
+```
+
+**After resolving with custom fields mapping:**
+```
+What best describes your current role or situation? → Founder of a business
+Business Name: → WXM LEGAL LTD
+Main Offer / Product / Service: → Consulting / business Influencer
+Team Size: → 1
+#1 Bottleneck Right Now (What's holding you back?) → Me
+What's your #1 goal in the next 90 days? → 8 figure revenue
+What does growth look like for you this year? → Millionaire status
+Why Now? → Momentum. And now is perfect butterfly effect
+```
+
+**Always present submission data in this resolved format.** Never show raw field IDs to the user.
+
+### Notes on field ID resolution
+
+- Some keys in `others` won't match any custom field — these are standard GHL fields (email, phone, etc.) or internal metadata. Present those by their key name directly.
+- If the custom fields endpoint returns 401, the token may lack the `locations/customFields.readonly` scope. In that case, inform the user that field names can't be resolved and present the raw values with a note that the IDs are unresolved.
+- Cache the custom field mapping for the session — it won't change between requests.
+
+---
+
 ## Key Gotchas
 
-1. **Custom field IDs are opaque.** Submission answers keyed by IDs like `"SrJvjpBhx9swA9vWMXk8"` are meaningless without cross-referencing the account's custom fields. Use `GET /locations/{locationId}/customFields` (see `references/account-config.md`) to map IDs to human-readable names.
+1. **`fieldsOriSequance` is misspelled.** GHL spells it "Sequance" not "Sequence". Use this exact key when accessing it.
 
-2. **`fieldsOriSequance` is misspelled.** GHL spells it "Sequance" not "Sequence". Use this exact key when accessing it.
+2. **Date range defaults to last 30 days.** If you're looking for older submissions and getting empty results, explicitly set `startAt` to an earlier date.
 
-3. **Date range defaults to last 30 days.** If you're looking for older submissions and getting empty results, explicitly set `startAt` to an earlier date.
+3. **Forms list has no pagination; surveys list does.** Forms returns all records in one response. Surveys uses `skip`/`limit` and defaults to 10 per page.
 
-4. **Forms list has no pagination; surveys list does.** Forms returns all records in one response. Surveys uses `skip`/`limit` and defaults to 10 per page.
+4. **Submissions pagination differs from list pagination.** Submissions use `page`/`limit` with `meta.nextPage`. Surveys list uses `skip`/`limit`.
 
-5. **Submissions pagination differs from list pagination.** Submissions use `page`/`limit` with `meta.nextPage`. Surveys list uses `skip`/`limit`.
+5. **3rd-party forms won't appear here.** If an account uses Typeform, JotForm, or similar, submissions won't show in these endpoints. The data lives on the contact's custom fields instead.
 
-6. **3rd-party forms won't appear here.** If an account uses Typeform, JotForm, or similar, submissions won't show in these endpoints. The data lives on the contact's custom fields instead.
-
-7. **Survey submissions may include `disqualified: true`.** This means the lead failed the survey's qualification logic. Filter these out when analyzing qualified leads.
+6. **Survey submissions may include `disqualified: true`.** This means the lead failed the survey's qualification logic. Filter these out when analyzing qualified leads.
 
 ---
 
@@ -306,23 +377,24 @@ GET /surveys/submissions?locationId={locationId}
 
 When a user asks about "applications", "lead data", or "who applied recently":
 
-1. **List both forms and surveys** to identify which ones are application forms (look for names containing "Application", "Qualification", etc.).
-2. **Query submissions** for the matching form/survey ID(s) with the relevant date range.
-3. **If submissions are empty**, the account may use 3rd-party forms. Check contact custom fields instead.
-4. **Map custom field IDs** to readable names using the custom fields endpoint for a clean summary.
+1. **Fetch the custom field mapping** — `GET /locations/{locationId}/customFields`. Do this in parallel with the next steps.
+2. **List both forms and surveys** to identify which ones are application forms (look for names containing "Application", "Qualification", etc.).
+3. **Query submissions** for the matching form/survey ID(s) with the relevant date range.
+4. **If submissions are empty**, the account may use 3rd-party forms. Check contact custom fields instead.
+5. **Resolve all field IDs** using the custom field mapping and present readable question/answer pairs.
 
 ### Answering Questions About Specific Form Fields
 
 When a user asks "what did [contact] answer for [question]":
 
-1. **Search submissions** using the `q` parameter with the contact's name/email.
-2. **Get custom fields** to build the ID-to-name mapping.
-3. **Match the question** to its custom field ID, then look up the value in the submission's `others` bag.
+1. **Fetch the custom field mapping** and **search submissions** (using the `q` parameter with the contact's name/email) in parallel.
+2. **Match the question** text to its custom field ID using the mapping, then look up the value in the submission's `others` bag.
 
 ### Aggregating Submission Data
 
 When a user wants a summary of responses (e.g., "how many leads said ASAP"):
 
-1. **Paginate through all submissions** for the target form/survey (set `limit=100`, iterate through `page` until `meta.nextPage` is `null`).
-2. **Set `startAt` explicitly** if the desired range exceeds 30 days.
-3. **Build the mapping** of field IDs to names once, then aggregate answers across all submissions.
+1. **Fetch the custom field mapping** first to identify which field ID corresponds to the question being asked.
+2. **Paginate through all submissions** for the target form/survey (set `limit=100`, iterate through `page` until `meta.nextPage` is `null`).
+3. **Set `startAt` explicitly** if the desired range exceeds 30 days.
+4. **Aggregate answers** using the resolved field names for the summary.
