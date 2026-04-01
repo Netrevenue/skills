@@ -4,9 +4,11 @@ description: >
   Manage GoHighLevel (GHL) sub-accounts via API for Netrevenue clients. Use this skill whenever the user asks about
   GHL account operations including: adding, removing, or updating users in a GHL account; managing calendar assignments
   and placements; purchasing or assigning phone numbers; listing or searching users, calendars, or phone numbers;
-  viewing pipeline data or opportunity details; managing custom fields; or auditing account configuration.
+  viewing pipeline data or opportunity details; managing custom fields; auditing account configuration;
+  or retrieving form/survey submissions and application data.
   Also use this skill when the user mentions "onboarding" or "offboarding" a rep (these are multi-step workflows
-  that include GHL operations). Trigger on mentions of "GHL", "GoHighLevel", "HighLevel", "sub-account", "location",
+  that include GHL operations), or when they ask about "applications", "lead data", "qualification data",
+  or specific form/survey questions. Trigger on mentions of "GHL", "GoHighLevel", "HighLevel", "sub-account", "location",
   or any client account name when combined with admin/operational actions. If an action is NOT covered by the API
   endpoints in this skill, use browser automation as a fallback -- ask the user for exact frontend steps and offer
   to remember the steps for future use.
@@ -77,6 +79,7 @@ Read the appropriate reference file for detailed endpoint documentation before m
 | Calendar Management | `references/calendars.md` | Create, update, delete calendars; assign/remove reps |
 | Phone Numbers | `references/phone-numbers.md` | Search available, purchase, list active, assign to users |
 | Pipelines & Opportunities | `references/pipelines.md` | List pipelines, search/read opportunities, audit pipeline health |
+| Forms & Surveys | `references/forms-surveys.md` | List forms/surveys, get submissions, application/lead data |
 | Account Configuration | `references/account-config.md` | Location settings, custom fields |
 
 ## Phone Number Purchasing Logic
