@@ -5,11 +5,12 @@ description: >
   GHL account operations including: adding, removing, or updating users in a GHL account; managing calendar assignments
   and placements; purchasing or assigning phone numbers; listing or searching users, calendars, or phone numbers;
   viewing pipeline data or opportunity details; managing custom fields; auditing account configuration;
-  or retrieving form/survey submissions and application data.
+  retrieving form/survey submissions and application data; or managing contacts (creating, updating, searching,
+  deleting, or upserting contacts).
   Also use this skill when the user mentions "onboarding" or "offboarding" a rep (these are multi-step workflows
   that include GHL operations), or when they ask about "applications", "lead data", "qualification data",
-  or specific form/survey questions. Trigger on mentions of "GHL", "GoHighLevel", "HighLevel", "sub-account", "location",
-  or any client account name when combined with admin/operational actions. If an action is NOT covered by the API
+  "contacts", "leads", or specific form/survey questions. Trigger on mentions of "GHL", "GoHighLevel",
+  "HighLevel", "sub-account", "location", or any client account name when combined with admin/operational actions. If an action is NOT covered by the API
   endpoints in this skill, use browser automation as a fallback -- ask the user for exact frontend steps and offer
   to remember the steps for future use.
 ---
@@ -65,6 +66,10 @@ Accept: application/json
 - User phone assignment: Via `lcPhone` field in user object (maps locationId to phone number)
 - Delete user response: Field is `succeded` (GHL's typo, not `succeeded`)
 - teamMembers `isZoomAdded`: String `"true"`/`"false"`, NOT boolean
+- Contacts update/upsert/delete: Response field is `succeded` (GHL's typo, not `succeeded`)
+- Contacts upsert: Returns `new: true` if created, `new: false` if updated existing
+- Contacts search: Uses `POST` (not GET), name filters use `firstNameLowerCase`/`lastNameLowerCase` fields
+- Contacts search: `tags` in create/update/upsert **overwrites** all existing tags
 
 **Error handling:** If an API call returns 401 Unauthorized, the token may be expired or invalid. Ask the user to verify the token. If 422 Unprocessable Entity, the request body is malformed -- check required fields. If 400 Bad Request, review the parameters against the reference docs.
 
@@ -79,6 +84,7 @@ Read the appropriate reference file for detailed endpoint documentation before m
 | Calendar Management | `references/calendars.md` | Create, update, delete calendars; assign/remove reps |
 | Phone Numbers | `references/phone-numbers.md` | Search available, purchase, list active, assign to users |
 | Pipelines & Opportunities | `references/pipelines.md` | List pipelines, search/read opportunities, audit pipeline health |
+| Contacts | `references/contacts.md` | Create, update, upsert, delete, search contacts with advanced filtering |
 | Forms & Surveys | `references/forms-surveys.md` | List forms/surveys, get submissions, application/lead data |
 | Account Configuration | `references/account-config.md` | Location settings, custom fields |
 
