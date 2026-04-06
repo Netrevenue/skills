@@ -13,11 +13,12 @@ This is the master orchestrator for Net Revenue's automated lead generation pipe
 ```
 Step 1: Scrape (Google Maps + Meta Ads + IG Profiles — parallel)
 Step 2: Extract contact info from websites
-Step 3: Merge, deduplicate, and filter
+Step 3: Merge, deduplicate, and filter (includes cross-run ledger dedup)
 Step 4: Enrich with Apollo.io company data
 Step 5: Classify leads (nr-icp-classifier skill)
 Step 6: Score and assign leads (nr-setter-scorecard skill)
 Step 7: Push qualified leads to GoHighLevel CRM
+Step 8: Update lead ledger (persist processed leads for future runs)
 ```
 
 Each step builds on the output of the previous one. Steps can be skipped if the user asks to start partway through (e.g., "skip scraping, use the leads we already have").
@@ -75,12 +76,13 @@ This is where the 4 data streams combine into unified lead records. Read `refere
 The short version:
 1. **Merge** Google Maps leads first (primary), then overlay Meta Ads (adds is_running_ads flag), then IG Profiles (backfills social data), then email scraper data (backfills contact info)
 2. **Match** leads across sources by domain (extracted from URLs) and ig_handle
-3. **Exclude** leads whose ig_handle matches an existing NR client (61 handles — see `nr-icp-classifier/references/nr_client_handles.md`)
-4. **Filter** leads matching hard disqualifier keywords (crypto, forex, MLM, fitness coach, etc.)
+3. **Cross-run dedup** — Load `data/processed_leads.jsonl` (the lead ledger) and remove any leads already processed in a previous run. Match by domain, email, ig_handle, or place_id. Entries older than 90 days are ignored for non-CRM outcomes (DQ'd or low-score leads get a fresh look after 3 months). See `references/merge_dedup_rules.md` for full ledger logic.
+4. **Exclude** leads whose ig_handle matches an existing NR client (61 handles — see `nr-icp-classifier/references/nr_client_handles.md`)
+5. **Filter** leads matching hard disqualifier keywords (crypto, forex, MLM, fitness coach, etc.)
 
 Each merged lead gets a UUID `lead_id` and a `sources` array tracking which scrapers contributed data.
 
-Report: how many raw leads → how many after merge → how many after dedup → how many after DQ filter.
+Report: how many raw leads → how many after merge → how many after ledger dedup → how many after NR client exclusion → how many after DQ filter.
 
 ## Step 4: Enrich with Apollo.io
 
@@ -154,6 +156,14 @@ For leads that pass all filters:
 
 Report: how many pushed, how many skipped (by reason), any errors.
 
+## Step 8: Update lead ledger
+
+After Step 7 completes (or after the last executed step in a partial run), append all leads that made it past the merge step to the persistent ledger at `data/processed_leads.jsonl`. This includes leads that were DQ'd, scored low, had no contact info, or were skipped at GHL push — recording them ensures they're recognized and skipped on the next weekly run.
+
+Each entry captures: domain, email, ig_handle, place_id, normalized name, run date, outcome, score, and tier. See `references/merge_dedup_rules.md` for the full schema and maintenance rules.
+
+This step is what makes the weekly cron viable — without it, every run would re-process the same leads and waste API budget on scraping, enrichment, and classification.
+
 ## Cost awareness
 
 The pipeline spends money on API calls. For context:
@@ -173,6 +183,7 @@ Pipeline Run Summary — YYYY-MM-DD
 ──────────────────────────────────
 Raw leads scraped:     X (GM: X, Meta: X, IG: X)
 After merge:           X
+After ledger dedup:    X (removed X — already processed in prior runs)
 After NR client dedup: X (removed X)
 After DQ filter:       X (removed X)
 Apollo enriched:       X / X
