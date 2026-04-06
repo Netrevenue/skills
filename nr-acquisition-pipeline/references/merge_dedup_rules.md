@@ -91,9 +91,9 @@ Process sources in this order. Earlier sources take priority for field values â€
 - If no match: create new lead from IG profile data
 
 ### 4. Email Scraper Data (backfill only)
-- Match to leads by domain
-- Backfill into existing leads: `email` (first from emails_found), `phone` (first from phones_found), `linkedin_url` (first from linkedin_urls_found), `ig_handle` (first from instagram_handles_found)
-- Set `has_booking_link: true` if `booking_link_found` is non-null
+- Match to leads by `domain` field from scraper output (matches against extracted domain of lead's `website`)
+- Backfill into existing leads: `email` (first non-generic from `emails` array), `phone` (first from `phones` array, then `phonesUncertain`), `linkedin_url` (first from `linkedIns` array), `ig_handle` (first from `instagrams` array)
+- Set `has_booking_link: true` if any URL in the `scrapedUrls` array matches booking keywords (calendly.com, acuityscheduling.com, hubspot.com/meetings, book-a-call, consultation, schedule, etc.)
 
 ---
 
