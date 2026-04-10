@@ -1,7 +1,7 @@
 ---
 name: gohighlevel
 description: >
-  Manage GoHighLevel (GHL) sub-accounts via API for Netrevenue clients. Use this skill whenever the user asks about
+  Manage GoHighLevel (GHL) accounts via API for Netrevenue clients. Use this skill whenever the user asks about
   GHL account operations including: adding, removing, or updating users in a GHL account; managing calendar assignments
   and placements; purchasing or assigning phone numbers; listing or searching users, calendars, or phone numbers;
   viewing pipeline data or opportunity details; managing custom fields; auditing account configuration;
@@ -10,9 +10,7 @@ description: >
   Also use this skill when the user mentions "onboarding" or "offboarding" a rep (these are multi-step workflows
   that include GHL operations), or when they ask about "applications", "lead data", "qualification data",
   "contacts", "leads", or specific form/survey questions. Trigger on mentions of "GHL", "GoHighLevel",
-  "HighLevel", "sub-account", "location", or any client account name when combined with admin/operational actions. If an action is NOT covered by the API
-  endpoints in this skill, use browser automation as a fallback -- ask the user for exact frontend steps and offer
-  to remember the steps for future use.
+  "HighLevel", "sub-account", or any client account name when combined with operational actions. 
 ---
 
 # GoHighLevel Skill
