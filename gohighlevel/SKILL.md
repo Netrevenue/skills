@@ -83,6 +83,7 @@ Read the appropriate reference file for detailed endpoint documentation before m
 | Phone Numbers | `references/phone-numbers.md` | Search available, purchase, list active, assign to users |
 | Pipelines & Opportunities | `references/pipelines.md` | List pipelines, search/read opportunities, audit pipeline health |
 | Contacts | `references/contacts.md` | Create, update, upsert, delete, search contacts with advanced filtering |
+| Conversations & Messages | `references/conversations.md` | Search conversations by contact, get message history, message type codes, manual vs automated filtering |
 | Forms & Surveys | `references/forms-surveys.md` | List forms/surveys, get submissions, application/lead data |
 | Account Configuration | `references/account-config.md` | Location settings, custom fields |
 
